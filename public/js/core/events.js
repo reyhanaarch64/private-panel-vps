@@ -65,7 +65,8 @@ function wire() {
   $('#copilotComposer').addEventListener('submit', sendCopilotMessage);
   window.CopilotMcp.init({ api, toast, confirmD, openOv, closeOv });
   $('#copilotInput').addEventListener('keydown', e => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && e.keyCode !== 229 &&
+        !window.matchMedia('(max-width: 680px)').matches) {
       e.preventDefault();
       $('#copilotComposer').requestSubmit();
     }

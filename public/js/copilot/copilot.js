@@ -26,7 +26,8 @@ function setView(view) {
 
 const CP = {
   chats: [], active: LS.get('vpsacc_copilot_active', null), after: 0, replayUntil: 0, pollTimer: null, polling: false, loaded: false,
-  assistantNode: null, assistantText: '', activities: new Map(), mcpApprovals: new Map(), busy: false, authenticated: false,
+  assistantNode: null, assistantText: '', activities: new Map(), workDrawer: null, workList: null, commandStates: new Map(),
+  mcpApprovals: new Map(), busy: false, authenticated: false,
   settings: null,
   loginJobId: null, loginAfter: 0, loginOutput: '', loginPollTimer: null, loginPolling: false, loginStarting: false
 };
@@ -109,6 +110,24 @@ function copilotMessage(role, text) {
   copilotScroll();
   return body;
 }
+function copilotTyping() {
+  if (CP.assistantNode) return;
+  const body = copilotMessage('assistant', '');
+  body.classList.add('copilot-typing');
+  const dots = h('span', 'copilot-typing-dots');
+  dots.setAttribute('role', 'status');
+  dots.setAttribute('aria-label', 'Copilot sedang mengetik');
+  for (let i = 0; i < 3; i++) dots.append(h('i'));
+  body.append(dots);
+  CP.assistantNode = body;
+  CP.assistantText = '';
+}
+function clearCopilotTyping() {
+  if (!CP.assistantNode || !CP.assistantNode.classList.contains('copilot-typing')) return;
+  CP.assistantNode.closest('.copilot-message')?.remove();
+  CP.assistantNode = null;
+  CP.assistantText = '';
+}
 function copilotActivity(id, label) {
   let node = id && CP.activities.get(id);
   if (node) {
@@ -127,6 +146,35 @@ function copilotActivity(id, label) {
 function copilotActivityText(node) {
   return $('.copilot-activity-details', node);
 }
+function copilotWorkDrawer() {
+  if (CP.workDrawer && CP.workDrawer.isConnected) return CP.workDrawer;
+  const drawer = h('details', 'copilot-work-drawer');
+  const summary = h('summary', 'copilot-work-summary');
+  summary.append(ic('terminal'), h('strong', 'copilot-work-title', 'Aktivitas Copilot'));
+  summary.append(h('span', 'copilot-work-count'));
+  summary.append(ic('expand_more', 'copilot-work-chevron'));
+  const list = h('div', 'copilot-work-items');
+  drawer.append(summary, list);
+  const messages = $('#copilotMessages');
+  const assistantRow = CP.assistantNode && CP.assistantNode.closest('.copilot-message');
+  if (assistantRow && assistantRow.parentElement === messages) messages.insertBefore(drawer, assistantRow);
+  else messages.append(drawer);
+  CP.workDrawer = drawer;
+  CP.workList = list;
+  return drawer;
+}
+function updateCopilotWorkSummary() {
+  if (!CP.workDrawer || !CP.workList) return;
+  const states = [...CP.commandStates.values()];
+  const running = states.filter(state =>
+    state === 'Berjalan' || state === 'Menyiapkan command' || state === 'Menunggu persetujuan'
+  ).length;
+  const failed = states.some(state => state === 'Gagal' || /^Kode [^0]/.test(state));
+  $('.copilot-work-title', CP.workDrawer).textContent = running
+    ? 'Copilot menjalankan perintah'
+    : (failed ? 'Copilot menyelesaikan perintah dengan error' : 'Copilot menyelesaikan perintah');
+  $('.copilot-work-count', CP.workDrawer).textContent = states.length + ' perintah';
+}
 function copilotCommandActivity(id, label, command, cwd) {
   let node = id && CP.activities.get(id);
   if (!node || !node.classList.contains('copilot-command-drawer')) {
@@ -142,7 +190,8 @@ function copilotCommandActivity(id, label, command, cwd) {
     body.append(h('pre', 'copilot-command-full'));
     body.append(h('pre', 'copilot-command-output'));
     node.append(summary, body);
-    $('#copilotMessages').append(node);
+    copilotWorkDrawer();
+    CP.workList.append(node);
     if (id) {
       CP.activities.set(id, node);
       node.dataset.activityId = id;
@@ -156,7 +205,11 @@ function copilotCommandActivity(id, label, command, cwd) {
     }
     copilotScroll();
   }
-  if (label) $('.copilot-command-state', node).textContent = label;
+  if (label) {
+    $('.copilot-command-state', node).textContent = label;
+    CP.commandStates.set(id, label);
+    updateCopilotWorkSummary();
+  }
   if (typeof command === 'string') {
     $('.copilot-command-inline', node).textContent = command || 'Command';
     $('.copilot-command-full', node).textContent = command ? '$ ' + command : '';
@@ -179,6 +232,9 @@ function renderCopilotHistory(chat) {
   const box = $('#copilotMessages');
   box.replaceChildren();
   CP.activities.clear();
+  CP.workDrawer = null;
+  CP.workList = null;
+  CP.commandStates.clear();
   CP.assistantNode = null;
   CP.assistantText = '';
   const history = [
@@ -187,7 +243,17 @@ function renderCopilotHistory(chat) {
   ].sort((a, b) => a.at - b.at);
   history.forEach(item => {
     if (item.kind === 'message') {
+      if (item.message.role === 'user') {
+        CP.workDrawer = null;
+        CP.workList = null;
+        CP.commandStates.clear();
+      }
       copilotMessage(item.message.role, item.message.content);
+      if (item.message.role === 'assistant') {
+        CP.workDrawer = null;
+        CP.workList = null;
+        CP.commandStates.clear();
+      }
       return;
     }
     const a = item.activity;
@@ -466,13 +532,20 @@ async function copilotPoll() {
 }
 function handleCopilotEvent(event) {
   const data = event.data || {};
-  if (event.type === 'assistant_delta') {
+  if (event.type === 'turn_start') {
+    CP.workDrawer = null;
+    CP.workList = null;
+    CP.commandStates.clear();
+    copilotTyping();
+  } else if (event.type === 'assistant_delta') {
     if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
+    CP.assistantNode.classList.remove('copilot-typing');
     CP.assistantText += data.text || '';
     renderCopilotMarkdown(CP.assistantNode, CP.assistantText);
     copilotScroll();
   } else if (event.type === 'assistant_final') {
     if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
+    CP.assistantNode.classList.remove('copilot-typing');
     CP.assistantText = data.content || CP.assistantText;
     renderCopilotMarkdown(CP.assistantNode, CP.assistantText);
     CP.assistantNode = null;
@@ -582,8 +655,10 @@ function handleCopilotEvent(event) {
     }
     if (actions) actions.replaceChildren(h('span', 'copilot-note', (data.approved ? 'Disetujui' : 'Ditolak') + (data.reason ? ' • ' + data.reason : '')));
   } else if (event.type === 'error' || event.type === 'storage_error') {
+    clearCopilotTyping();
     copilotMessage('system', data.message || 'Terjadi kesalahan Copilot.');
   } else if (event.type === 'turn_end') {
+    clearCopilotTyping();
     CP.assistantNode = null;
     CP.assistantText = '';
   }
