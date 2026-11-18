@@ -22,7 +22,7 @@ const LS = {
 };
 
 const S = {
-  token: LS.get('vpsacc_token', ''), path: '', parent: null, scope: '/', items: [],
+  token: LS.get('vpsacc_token', ''), path: '', parent: null, scope: '/', home: '/', items: [],
   sel: new Set(), selecting: false, clip: null, view: 'files', sort: LS.get('vpsacc_sort', 'name'),
   hidden: LS.get('vpsacc_hidden', '0') === '1', shown: 300, flash: null, sys: null
 };

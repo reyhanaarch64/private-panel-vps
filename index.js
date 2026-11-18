@@ -102,7 +102,7 @@ const { publicShares, dropPublicUnder } = registerPublicShares(app, {
 registerFileRoutes(app, {
   wrap, HttpError, guard, SCOPE, publicShares, dropPublicUnder, fs, fsp, path,
   Busboy, pipeline, archiver, extract, MEDIA_RE, rand, eachItem, asList, validName, describe,
-  inBlock, lstatOrNull, exists, freeName, batchRes, describeErr, MAX_READ, tickets, TICKET_MS, crypto
+  inBlock, lstatOrNull, exists, freeName, batchRes, describeErr, MAX_READ, tickets, TICKET_MS, crypto, dirOf
 });
 app.get('/api/ping', wrap(async (req, res) => {
   let disk = null;
@@ -111,7 +111,8 @@ app.get('/api/ping', wrap(async (req, res) => {
     disk = { total: s.blocks * s.bsize, free: s.bavail * s.bsize };
   } catch (e) { /* abaikan */ }
   res.json({
-    ok: true, hostname: os.hostname(), scope: SCOPE, full: SCOPE === '/', uptime: os.uptime(),
+    ok: true, hostname: os.hostname(), scope: SCOPE, home: SCOPE === '/' ? os.homedir() : SCOPE,
+    full: SCOPE === '/', uptime: os.uptime(),
     load: os.loadavg(), mem: { total: os.totalmem(), free: os.freemem() }, disk,
     node: process.version, platform: os.platform() + ' ' + os.release()
   });

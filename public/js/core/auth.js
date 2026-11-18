@@ -21,8 +21,9 @@ async function doLogin() {
     LS.set('vpsacc_token', t);
     S.sys = d;
     S.scope = d.scope;
+    S.home = d.home || d.scope;
     showApp();
-    startAt(hashDec() || S.scope);
+    startAt(S.home);
   } catch (e) {
     S.token = '';
     $('#lgErr').textContent = e.status === 401 ? 'Token salah' : e.message;

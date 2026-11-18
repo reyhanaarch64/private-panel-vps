@@ -50,7 +50,7 @@ function wire() {
     } else if (S.parent) go(S.parent);
   };
   $('#btnSel').onclick = () => { if (S.selecting) exitSelect(); else { S.selecting = true; render(); } };
-  $('#tabHome').onclick = () => { setView('files'); if (S.path !== S.scope) go(S.scope); };
+  $('#tabHome').onclick = () => { setView('files'); if (S.path !== S.home) go(S.home); };
   $('#btnSearch').onclick = () => openSearch();
   $('#tabTerminal').onclick = () => setView('terminal');
   $('#tabProcesses').onclick = () => setView('processes');

@@ -4,7 +4,7 @@ function registerFileRoutes(app, deps) {
   const { wrap, HttpError, guard, SCOPE, publicShares, dropPublicUnder, fs, fsp, path,
     Busboy, pipeline, archiver, extract, MEDIA_RE, rand, eachItem, asList, validName,
     describe, inBlock, lstatOrNull, exists, freeName, batchRes, describeErr, MAX_READ,
-    tickets, TICKET_MS, crypto } = deps;
+    tickets, TICKET_MS, crypto, dirOf } = deps;
   app.get('/api/list', wrap(async (req, res) => {
     const dir = await guard(req.query.path || SCOPE, { allowBlock: true });
     if (!(await fsp.stat(dir)).isDirectory()) throw new HttpError(400, 'bukan folder');

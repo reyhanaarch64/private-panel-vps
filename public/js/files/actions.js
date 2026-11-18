@@ -34,7 +34,7 @@ function itemMenu(it) {
   } else if (it.pub === 'inactive') items.push({ label: 'Aktifkan publikasi', icon: 'public', fn: () => opPublish(it.name, true) });
   else items.push({ label: 'Publikasikan', icon: 'public', fn: () => opPublish(it.name) });
   items.push({ label: 'Zip', icon: 'folder_zip', fn: () => opZip([it.name]) });
-  if (k.k === 'zip') items.push({ label: 'Ekstrak di sini', icon: 'unarchive', fn: () => opUnzip([it.name]) });
+  if (k.k === 'zip') items.push({ label: 'Ekstrak', icon: 'unarchive', fn: () => opUnzip([it.name]) });
   items.push(
     { label: 'Izin akses', icon: 'lock', fn: () => opChmod([it.name]) },
     { label: 'Info', icon: 'info', fn: () => opInfo(it.name) },
@@ -264,6 +264,15 @@ function opClip(mode, names) {
 async function opPaste() {
   const c = S.clip;
   if (!c) return;
+  if (c.mode === 'unzip') {
+    const r = await run(() => api('POST', '/unzip', { paths: c.from, to: S.path, subfolder: true }));
+    if (!r) return;
+    report(r, 'diekstrak');
+    const left = c.from.filter(p => r.failed.some(f => f.path === p));
+    S.clip = left.length ? { mode: 'unzip', from: left } : null;
+    await reload();
+    return;
+  }
   const r = await run(() => api('POST', c.mode === 'move' ? '/move' : '/copy', { from: c.from, to: S.path }));
   if (!r) return;
   report(r, c.mode === 'move' ? 'dipindah' : 'disalin');
@@ -315,14 +324,15 @@ async function opUnzip(names) {
     ]
   });
   if (!choice) return;
-  let body = { paths: names.map(full) };
   if (choice === 'to') {
-    const dest = await promptD('Ekstrak ke', 'Path folder tujuan (absolut atau relatif ke scope)', S.path, 'Ekstrak');
-    if (!dest) return;
-    body.to = dest.startsWith('/') ? dest : join(S.path, dest);
-    body.subfolder = true;
+    S.clip = { mode: 'unzip', from: names.map(full) };
+    S.selecting = false;
+    S.sel.clear();
+    render();
+    toast(names.length + ' arsip siap diekstrak, buka folder tujuan lalu Ekstrak');
+    return;
   }
-  const r = await run(() => api('POST', '/unzip', body));
+  const r = await run(() => api('POST', '/unzip', { paths: names.map(full) }));
   if (!r) return;
   report(r, 'diekstrak');
   await reload();
@@ -406,7 +416,7 @@ function selMore() {
   const items = [];
   if (names.length === 1) items.push({ label: 'Ubah nama', icon: 'drive_file_rename_outline', fn: () => opRename(names[0]) });
   items.push({ label: 'Izin akses', icon: 'lock', fn: () => opChmod(names) });
-  if (its.length && its.every(i => kindOf(i).k === 'zip')) items.push({ label: 'Ekstrak di sini', icon: 'unarchive', fn: () => opUnzip(names) });
+  if (its.length && its.every(i => kindOf(i).k === 'zip')) items.push({ label: 'Ekstrak', icon: 'unarchive', fn: () => opUnzip(names) });
   if (names.length === 1) {
     if (its[0].type !== 'dir') items.push({ label: 'Unduh', icon: 'download', fn: () => opDownload(names[0]) });
     items.push({ label: 'Info', icon: 'info', fn: () => opInfo(names[0]) });

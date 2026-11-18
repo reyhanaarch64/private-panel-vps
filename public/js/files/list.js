@@ -117,7 +117,10 @@ function chrome() {
   const pb = $('#pasteBar');
   if (files && S.clip && !S.selecting) {
     pb.classList.remove('hidden');
-    $('#pasteTxt').textContent = S.clip.from.length + ' item ' + (S.clip.mode === 'move' ? 'dipotong' : 'disalin');
+    $('#pasteTxt').textContent = S.clip.mode === 'unzip'
+      ? S.clip.from.length + ' arsip siap diekstrak'
+      : S.clip.from.length + ' item ' + (S.clip.mode === 'move' ? 'dipotong' : 'disalin');
+    $('#pasteGo').textContent = S.clip.mode === 'unzip' ? 'Ekstrak' : 'Tempel';
   } else pb.classList.add('hidden');
 }
 
@@ -136,7 +139,7 @@ function go(p) {
   load(p);
 }
 function route() {
-  load(hashDec() || S.scope);
+  load(hashDec() || S.home);
 }
 function startAt(p) {
   history.replaceState({ nav: 1 }, '', hashEnc(p));
@@ -147,7 +150,7 @@ async function load(p, keepScroll) {
   const top = $('#scroll').scrollTop;
   const d = await run(() => api('GET', '/list?path=' + enc(p)));
   if (!d) {
-    if (!S.path && p !== S.scope) return load(S.scope);
+    if (!S.path && p !== S.home) return load(S.home);
     return;
   }
   S.path = d.path;
