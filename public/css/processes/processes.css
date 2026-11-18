@@ -1,0 +1,36 @@
+.term-status { flex: none; min-height: 27px; padding: 5px 11px calc(5px + env(safe-area-inset-bottom)); color: #9ba8b7; background: #11151c; font-size: 11px; font-family: var(--mono); border-top: 1px solid #252b35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.process-workspace, .package-workspace { display: flex; flex-direction: column; padding: 12px 13px calc(12px + env(safe-area-inset-bottom)); gap: 10px; overflow: hidden; }
+.proc-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; flex: none; }
+.proc-metric { min-width: 0; border-radius: 14px; background: var(--card); padding: 12px 10px; display: flex; flex-direction: column; gap: 5px; }
+.proc-metric strong { font-size: 17px; font-weight: 750; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.proc-metric span { color: var(--sub); font-size: 11px; font-weight: 600; }
+.proc-controls { display: flex; align-items: center; gap: 7px; flex: none; }
+.proc-search { display: flex; align-items: center; gap: 7px; min-width: 0; flex: 1; height: 42px; padding: 0 10px; border-radius: 12px; background: var(--card); }
+.proc-search .ms { color: var(--sub); font-size: 20px; }
+.proc-search input { flex: 1; min-width: 0; width: 100%; border: 0; outline: 0; background: transparent; font-size: 13px; }
+#procSort { flex: none; max-width: 124px; height: 42px; border: 0; outline: 0; border-radius: 12px; padding: 0 8px; background: var(--card); color: var(--text); font-size: 12px; }
+.proc-filters { display: flex; gap: 7px; flex: none; overflow-x: auto; scrollbar-width: none; }
+.proc-filters::-webkit-scrollbar { display: none; }
+.proc-filter { flex: none; height: 34px; padding: 0 13px; border-radius: 18px; background: var(--fill); color: var(--sub); font-size: 12px; font-weight: 650; }
+.proc-filter.active { background: var(--tint); color: #fff; }
+.proc-list { flex: 1; min-height: 0; overflow-y: auto; border-radius: 14px; background: var(--card); overscroll-behavior: contain; }
+.proc-row { display: block; width: 100%; min-height: 82px; padding: 11px 13px; text-align: left; border-bottom: .5px solid var(--sep); }
+.proc-row:last-child { border-bottom: 0; }
+.proc-row:active { background: var(--fill); }
+.proc-rowtop { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.proc-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 700; }
+.proc-pid { flex: none; color: var(--sub); font-size: 11px; font-family: var(--mono); }
+.proc-origin { flex: none; border-radius: 7px; padding: 3px 6px; color: var(--sub); background: var(--fill); font-size: 10px; font-weight: 650; }
+.proc-origin.terminal { color: var(--tint); background: var(--sel); }
+.proc-command { margin-top: 5px; color: var(--sub); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono); font-size: 10px; }
+.proc-meta { display: flex; align-items: center; gap: 12px; margin-top: 7px; color: var(--sub); font-size: 10px; font-variant-numeric: tabular-nums; }
+.proc-empty { padding: 35px 16px; text-align: center; color: var(--sub); font-size: 13px; }
+.proc-updated { flex: none; color: var(--sub); text-align: center; font-size: 10px; }
+@media (max-width: 380px) {
+  .tab { font-size: 10px; }
+  .tab .ms { font-size: 25px; }
+  .proc-metric { padding: 10px 8px; }
+  .proc-metric strong { font-size: 14px; }
+  .proc-meta { gap: 7px; }
+}
+.panel-brand { color: var(--sub); font-size: 12px; font-weight: 750; letter-spacing: .3px; margin: 16px 0 4px; }

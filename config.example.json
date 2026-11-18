@@ -1,0 +1,12 @@
+{
+  "bind": "127.0.0.1",
+  "port": 9900,
+  "scope": "home",
+  "scopePath": "",
+  "maxReadBytes": 5242880,
+  "maxAuthFailures": 5,
+  "authBanMinutes": 15,
+  "fileTicketMinutes": 5,
+  "websocketTicketSeconds": 120,
+  "maxTerminals": 8
+}

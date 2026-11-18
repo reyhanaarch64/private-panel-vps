@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="{{HOSTNAME}} panel">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<title>{{HOSTNAME}} panel</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23007aff'/%3E%3Cpath d='M12 22a4 4 0 014-4h12l5 6h15a4 4 0 014 4v18a4 4 0 01-4 4H16a4 4 0 01-4-4z' fill='%23fff'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0..1,0&display=block">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/css/xterm.css">
+<script src="/js/core/theme.js"></script>
+<link rel="stylesheet" href="/css/core/base.css">
+<link rel="stylesheet" href="/css/editor/editor.css">
+<link rel="stylesheet" href="/css/files/search.css">
+<link rel="stylesheet" href="/css/core/feedback.css">
+<link rel="stylesheet" href="/css/editor/codemirror.css">
+<link rel="stylesheet" href="/css/terminal/jobs.css">
+<link rel="stylesheet" href="/css/terminal/terminal.css">
+<link rel="stylesheet" href="/css/processes/processes.css">
+<link rel="stylesheet" href="/css/files/search-filters.css">
+<link rel="stylesheet" href="/css/copilot/copilot.css">
+</head>
+<body data-host="{{HOSTNAME}}">
+<div id="bar" class="loadbar hidden"></div>
+
+<section id="login">
+  <div class="lg-ico"><span class="ms">dns</span></div>
+  <div class="lg-title" id="lgTitle"></div>
+  <div class="lg-sub">Masukkan token untuk masuk</div>
+  <div class="lg-field">
+    <input id="lgToken" type="password" placeholder="Token" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button id="lgEye" class="nbtn" type="button"><span class="ms">visibility</span></button>
+  </div>
+  <button id="lgBtn" class="btn" type="button">Masuk</button>
+  <div id="lgErr" class="lg-err"></div>
+</section>
+
+<main id="app" class="hidden">
+  <header class="nav" id="nav">
+    <div class="nav-row">
+      <button class="nbtn" id="btnUp" type="button"></button>
+      <div class="nav-title" id="navTitle"></div>
+      <button class="nbtn" id="btnSearch" type="button" title="Cari"><span class="ms">search</span></button>
+      <button class="nbtn" id="btnMenu" type="button" title="Menu"><span class="ms">more_horiz</span></button>
+      <button class="nbtn txt" id="btnSel" type="button">Pilih</button>
+    </div>
+  </header>
+  <div class="scroll" id="scroll">
+    <div class="panel-brand" id="panelBrand"></div>
+    <h1 class="large" id="largeTitle"></h1>
+    <div class="crumbs" id="crumbs"></div>
+    <div id="list"></div>
+    <div id="foot" class="foot"></div>
+  </div>
+
+  <section id="terminalView" class="workspace terminal-workspace hidden">
+    <div class="term-sessionbar">
+      <div id="termSessions" class="term-sessions"></div>
+      <button id="termNew" class="term-action" type="button" title="Terminal baru"><span class="ms">add</span></button>
+      <button id="termClose" class="term-action" type="button" title="Tutup terminal"><span class="ms">close</span></button>
+    </div>
+    <div id="termXterm" class="term-xterm"></div>
+    <div id="termKeys" class="term-keybar">
+      <button class="term-key" data-key="ESC" type="button">esc</button>
+      <button class="term-key" data-key="TAB" type="button">tab</button>
+      <button class="term-key modifier" data-key="CTRL" type="button">ctrl</button>
+      <button class="term-key modifier" data-key="ALT" type="button">alt</button>
+      <button class="term-key" data-key="C-X" type="button">^x</button>
+      <button class="term-key" data-key="C-O" type="button">^o</button>
+      <button class="term-key" data-key="C-W" type="button">^w</button>
+      <button class="term-key" data-key="C-G" type="button">^g</button>
+      <button class="term-key" data-key="C-C" type="button">^c</button>
+      <button class="term-key" data-key="C-Z" type="button">^z</button>
+      <button class="term-key" data-key="C-D" type="button">^d</button>
+      <button class="term-key" data-key="HOME" type="button">home</button>
+      <button class="term-key" data-key="END" type="button">end</button>
+      <button class="term-key" data-key="PGUP" type="button">pgup</button>
+      <button class="term-key" data-key="PGDN" type="button">pgdn</button>
+      <button class="term-key" data-key="UP" type="button">↑</button>
+      <button class="term-key" data-key="DOWN" type="button">↓</button>
+      <button class="term-key" data-key="LEFT" type="button">←</button>
+      <button class="term-key" data-key="RIGHT" type="button">→</button>
+    </div>
+    <div id="termStatus" class="term-status">belum ada terminal</div>
+  </section>
+
+  <section id="processView" class="workspace process-workspace hidden">
+    <div class="proc-summary">
+      <div class="proc-metric"><strong id="procCpu">—</strong><span>CPU VPS</span></div>
+      <div class="proc-metric"><strong id="procRam">—</strong><span>RAM terpakai</span></div>
+      <div class="proc-metric"><strong id="procCount">—</strong><span>Proses</span></div>
+    </div>
+    <div class="proc-controls">
+      <label class="proc-search"><span class="ms">search</span><input id="procSearch" type="search" placeholder="Cari nama, PID, command…" autocomplete="off"></label>
+      <select id="procSort" aria-label="Urutkan proses">
+        <option value="cpu">CPU tertinggi</option>
+        <option value="ram">RAM terbesar</option>
+        <option value="pid">PID</option>
+        <option value="name">Nama</option>
+      </select>
+      <button id="procRefresh" class="term-action" type="button" title="Segarkan"><span class="ms">refresh</span></button>
+    </div>
+    <div class="proc-filters">
+      <button class="proc-filter active" data-filter="all" type="button">Semua</button>
+      <button class="proc-filter" data-filter="terminal" type="button">Terminal web</button>
+      <button class="proc-filter" data-filter="global" type="button">Global VPS</button>
+    </div>
+    <div id="procList" class="proc-list"><div class="proc-empty">Memuat daftar proses…</div></div>
+    <div id="procUpdated" class="proc-updated">monitoring otomatis setiap 2,5 detik</div>
+  </section>
+
+  <section id="packageView" class="workspace package-workspace hidden">
+    <div class="proc-controls">
+      <label class="proc-search"><span class="ms">search</span><input id="pkgSearch" type="search" placeholder="Cari package…" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></label>
+      <button id="pkgUpdate" class="term-action" type="button" title="Perbarui daftar package (apt update)"><span class="ms">sync</span></button>
+      <button id="pkgRefresh" class="term-action" type="button" title="Segarkan"><span class="ms">refresh</span></button>
+    </div>
+    <div class="proc-filters">
+      <button class="proc-filter active" data-pkgfilter="all" type="button">Semua terpasang</button>
+      <button class="proc-filter" data-pkgfilter="manual" type="button">Dipasang manual</button>
+    </div>
+    <div id="pkgNote" class="pkg-note hidden">Scope terbatas: package dapat dilihat dan dicari, tetapi instalasi hanya tersedia dalam scope full.</div>
+    <div id="pkgList" class="proc-list"><div class="proc-empty">Memuat daftar package…</div></div>
+  </section>
+
+  <section id="copilotView" class="workspace copilot-workspace hidden">
+    <aside class="copilot-sidebar" id="copilotSidebar">
+      <div class="copilot-sidehead">
+        <strong>Chat Copilot</strong>
+        <button id="copilotNew" class="term-action" type="button" title="Chat baru"><span class="ms">add</span></button>
+      </div>
+      <div id="copilotAuth" class="copilot-auth">
+        <div id="copilotAuthText">Memeriksa login Copilot…</div>
+        <button id="copilotLogin" class="btn copilot-login hidden" type="button">Login Copilot</button>
+        <div id="copilotLoginFlow" class="copilot-login-flow hidden">
+          <div class="copilot-login-hint">Buka halaman GitHub, masukkan kode ini, lalu setujui akses:</div>
+          <a id="copilotLoginUrl" class="hidden" target="_blank" rel="noopener noreferrer">Buka halaman login GitHub</a>
+          <div class="copilot-login-code">
+            <code id="copilotLoginCode"></code>
+            <button id="copilotLoginCopy" class="term-action" type="button" title="Salin kode"><span class="ms">content_copy</span></button>
+          </div>
+          <pre id="copilotLoginOutput"></pre>
+        </div>
+      </div>
+      <div id="copilotChatList" class="copilot-chat-list"></div>
+    </aside>
+    <div class="copilot-chat">
+      <div class="copilot-chathead">
+        <button id="copilotShowList" class="term-action copilot-back" type="button" title="Daftar chat"><span class="ms">arrow_back</span></button>
+        <strong id="copilotTitle">Pilih atau buat chat</strong>
+        <span id="copilotScope" class="copilot-scope"></span>
+        <button id="copilotSettings" class="term-action" type="button" title="Pengaturan Copilot"><span class="ms">settings</span></button>
+        <button id="copilotDelete" class="term-action" type="button" title="Hapus chat" disabled><span class="ms">delete</span></button>
+      </div>
+      <div id="copilotMessages" class="copilot-messages">
+        <div class="copilot-empty">Tanyakan sesuatu atau minta Copilot mengelola file dalam scope panel.</div>
+      </div>
+      <div id="copilotApprovals" class="copilot-approvals"></div>
+      <form id="copilotComposer" class="copilot-composer">
+        <div class="copilot-add-wrap">
+          <button id="copilotPlus" class="copilot-add-button" type="button" aria-label="Tambah konektor" title="Tambah konektor">
+            <span class="ms">add</span>
+          </button>
+          <div id="copilotPlusMenu" class="copilot-add-menu hidden">
+            <button id="copilotMcpManage" type="button"><span class="ms">hub</span><span>MCP server</span></button>
+          </div>
+        </div>
+        <textarea id="copilotInput" rows="2" placeholder="Ketik pesan untuk Copilot…" autocomplete="off"></textarea>
+        <button id="copilotSend" class="copilot-send" type="submit" title="Kirim" aria-label="Kirim"><span class="ms">send</span></button>
+        <div class="copilot-policy">Mode inspeksi cepat: command inspeksi tertentu berjalan tanpa konfirmasi. Command lainnya perlu persetujuan.</div>
+      </form>
+    </div>
+  </section>
+
+  <div id="pasteBar" class="paste hidden">
+    <span class="ms">content_paste</span>
+    <div class="paste-txt" id="pasteTxt"></div>
+    <button class="pbtn" id="pasteGo" type="button">Tempel</button>
+    <button class="pbtn x" id="pasteX" type="button"><span class="ms">close</span></button>
+  </div>
+
+  <nav class="tabbar" id="tabbar">
+    <button class="tab active" id="tabHome" type="button"><span class="ms">folder</span>Files</button>
+    <button class="tab" id="tabTerminal" type="button"><span class="ms">terminal</span>Terminal</button>
+    <button class="tab add" id="tabAdd" type="button"><span class="circle"><span class="ms">add</span></span>Baru</button>
+    <button class="tab" id="tabProcesses" type="button"><span class="ms">monitor_heart</span>Proses</button>
+    <button class="tab" id="tabPackages" type="button"><span class="ms">inventory_2</span>Package</button>
+    <button class="tab" id="tabCopilot" type="button"><span class="ms">smart_toy</span>Copilot</button>
+  </nav>
+  <nav class="tabbar selbar hidden" id="selbar">
+    <button class="tab" id="sbCopy" type="button"><span class="ms">content_copy</span>Salin</button>
+    <button class="tab" id="sbCut" type="button"><span class="ms">drive_file_move</span>Pindah</button>
+    <button class="tab" id="sbZip" type="button"><span class="ms">folder_zip</span>Zip</button>
+    <button class="tab red" id="sbDel" type="button"><span class="ms">delete</span>Hapus</button>
+    <button class="tab" id="sbMore" type="button"><span class="ms">more_horiz</span>Lainnya</button>
+  </nav>
+</main>
+
+<div id="toasts"></div>
+<input type="file" id="fileInp" multiple hidden>
+
+<script defer src="https://cdn.jsdelivr.net/npm/marked@15.0.7/marked.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@xterm/xterm@5.5.0/lib/xterm.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@xterm/addon-fit@0.10.0/lib/addon-fit.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/dayjs.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/plugin/relativeTime.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.13/locale/id.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/codemirror.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/mode/simple.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/matchbrackets.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/edit/closebrackets.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/selection/active-line.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/addon/search/searchcursor.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/meta.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/xml/xml.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/javascript/javascript.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/css/css.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/htmlmixed/htmlmixed.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/clike/clike.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/php/php.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/python/python.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/shell/shell.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/go/go.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/markdown/markdown.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/yaml/yaml.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/sql/sql.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/properties/properties.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/nginx/nginx.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/dockerfile/dockerfile.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/toml/toml.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/rust/rust.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/lua/lua.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/ruby/ruby.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/perl/perl.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.16/mode/diff/diff.min.js"></script>
+<!-- Ordered classic scripts share lexical bindings; keep this sequence aligned with the module categories. -->
+<script defer src="/js/core/runtime.js"></script>
+<script defer src="/js/files/list.js"></script>
+<script defer src="/js/files/actions.js"></script>
+<script defer src="/js/editor/editor.js"></script>
+<script defer src="/js/files/search.js"></script>
+<script defer src="/js/core/auth.js"></script>
+<script defer src="/js/terminal/sessions.js"></script>
+<script defer src="/js/core/theme-ui.js"></script>
+<script defer src="/js/packages/packages.js"></script>
+<script defer src="/js/copilot/copilot.js"></script>
+<script defer src="/js/processes/processes.js"></script>
+<script defer src="/js/core/events.js"></script>
+<script defer src="/js/files/types.js"></script>
+<script defer src="/js/terminal/jobs.js"></script>
+<script defer src="/js/terminal/setup.js"></script>
+<script defer src="/js/core/pwa-install.js"></script>
+<script defer src="/js/copilot/mcp-manager.js"></script>
+<script defer src="/app.js"></script>
+</body>
+</html>

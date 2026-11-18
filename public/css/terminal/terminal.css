@@ -1,0 +1,25 @@
+/* Workspace terminal dan process monitor */
+.tab.active { color: var(--tint); }
+.workspace { flex: 1; min-height: 0; overflow: hidden; margin-bottom: calc(74px + env(safe-area-inset-bottom)); }
+.terminal-workspace { display: flex; flex-direction: column; background: #080a0f; color: #e6edf3; }
+.term-sessionbar { display: flex; align-items: center; gap: 6px; padding: 7px 9px; min-height: 48px; background: #11151c; border-bottom: 1px solid #252b35; flex: none; }
+.term-sessions { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+.term-sessions::-webkit-scrollbar { display: none; }
+.term-session { flex: none; max-width: 150px; height: 34px; padding: 0 12px; border-radius: 9px; color: #aab4c0; background: #1b222c; font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.term-session.active { color: #fff; background: #245b9e; }
+.term-action { flex: none; width: 38px; height: 38px; border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; background: var(--fill); color: var(--text); }
+.term-action:disabled { opacity: .35; }
+.term-action .ms { font-size: 22px; }
+.terminal-workspace .term-action { background: #202a36; color: #d7e1ed; }
+.term-xterm { flex: 1; min-height: 0; position: relative; overflow: hidden; padding: 0; background: #080a0f; touch-action: none; }
+.term-instance { display: none; position: absolute; inset: 0; min-width: 0; min-height: 0; }
+.term-instance.active { display: block; }
+/* padding 0 biar FitAddon hitung cols/rows akurat; TUI butuh ini */
+.term-instance .xterm { height: 100% !important; width: 100% !important; padding: 0 !important; margin: 0 !important; box-sizing: border-box; }
+.term-instance .xterm-viewport { overscroll-behavior: contain; overflow-y: auto !important; }
+.term-instance .xterm-screen { height: 100%; }
+.term-instance .xterm-rows { line-height: normal !important; }
+.term-keybar { display: flex; align-items: center; gap: 6px; overflow-x: auto; padding: 7px 8px; background: #11151c; border-top: 1px solid #252b35; scrollbar-width: none; flex: none; }
+.term-keybar::-webkit-scrollbar { display: none; }
+.term-key { flex: none; min-width: 45px; height: 40px; padding: 0 10px; border-radius: 9px; color: #dce5ef; background: #242d39; font-family: var(--mono); font-size: 13px; font-weight: 600; text-transform: uppercase; }
+.term-key:active, .term-key.on { color: #fff; background: #1769bd; }

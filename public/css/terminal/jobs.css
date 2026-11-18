@@ -1,0 +1,13 @@
+.termbox { flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; background: #0b0b0d; color: #e5e5ea; padding: 10px 12px; font-family: var(--mono); font-size: 12px; line-height: 1.4; -webkit-overflow-scrolling: touch; user-select: text; -webkit-user-select: text; }
+.tl { white-space: pre-wrap; word-break: break-all; min-height: 1.4em; }
+.tbtn { height: 44px; padding: 0 18px; border-radius: 22px; background: var(--tint); color: #fff; font-weight: 700; font-size: 15px; flex: none; margin-left: 2px; }
+.tbtn.red { background: var(--red); }
+.tbar { background: #111113; border-top: .5px solid #333; padding: 8px 8px calc(8px + env(safe-area-inset-bottom)); flex: none; }
+.tkeys { display: flex; gap: 6px; margin-bottom: 8px; overflow-x: auto; scrollbar-width: none; }
+.tkeys::-webkit-scrollbar { display: none; }
+.tkey { flex: none; height: 40px; padding: 0 14px; border-radius: 10px; background: #2c2c2e; color: #fff; font-family: var(--mono); font-size: 14px; font-weight: 600; }
+.tkey:active { background: #3a3a3c; }
+.tin { display: flex; gap: 8px; }
+.tin input { flex: 1; min-width: 0; height: 48px; border-radius: 12px; border: 0; background: #2c2c2e; color: #fff; padding: 0 14px; font-family: var(--mono); font-size: 15px; outline: none; }
+.tin button { height: 48px; padding: 0 18px; border-radius: 12px; background: var(--tint); color: #fff; font-weight: 700; }
+.page.dark .page-title small { color: #98989f; }

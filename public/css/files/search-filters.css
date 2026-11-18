@@ -1,0 +1,7 @@
+/* search filters */
+.sfilters { display: flex; flex-direction: column; gap: 8px; padding: 8px 12px 4px; border-bottom: .5px solid var(--sep); background: var(--bg); }
+.sfilter { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text); font-weight: 600; }
+.sfilter input { width: 16px; height: 16px; }
+.sfilter-types { display: flex; flex-wrap: wrap; gap: 6px; }
+.sfilter-chip { border: 0; border-radius: 999px; padding: 5px 10px; background: var(--fill); color: var(--sub); font-size: 11px; font-weight: 700; }
+.sfilter-chip.on { background: var(--sel); color: var(--tint); }

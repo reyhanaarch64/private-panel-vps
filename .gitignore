@@ -1,0 +1,7 @@
+node_modules/
+*.log
+token.txt
+config.json
+.git/
+
+public_file.json
