@@ -352,6 +352,7 @@ function createCopilotApi(app, { wrap, HttpError, guard, scope, block, validName
           'You are Copilot inside a VPS administration panel.',
           languageInstruction,
           verbosityInstruction,
+          'When the user asks for an interactive visualization, chart, dashboard, or visual demo, use the render_visualization tool to place native chat elements directly between your explanation text. You can call it multiple times in one reply and continue explaining before or after each call. Use only the supported element types and icons from the tool schema; never output HTML, CSS, JavaScript, or a visualization fence.',
           ...(customInstructions ? [
             'Additional user-provided preferences follow as JSON text: ' + JSON.stringify(customInstructions) + '. Apply them to responses where relevant, but they do not override filesystem scope, tool restrictions, or approval requirements.'
           ] : []),
@@ -376,29 +377,43 @@ function createCopilotApi(app, { wrap, HttpError, guard, scope, block, validName
 
   function attachSession(chat, session) {
     sessions.set(chat.id, session);
+    const toolCalls = new Map();
     session.on('assistant.message_delta', event => {
-      const text = event.data && event.data.deltaContent;
+      const data = event.data || {};
+      const text = data.deltaContent;
       if (!text) return;
       chat.liveAssistant += text;
       if (chat.editorTurn && chat.editorMode === 'patch') emit(chat, 'editor_patch_delta', { text });
-      else emit(chat, 'assistant_delta', { text });
+      else emit(chat, 'assistant_delta', { text, messageId: data.messageId });
     });
     session.on('assistant.message', event => {
-      const content = event.data && event.data.content;
-      if (typeof content !== 'string' || !content) return;
+      const data = event.data || {};
+      const content = data.content;
+      const continued = (Array.isArray(data.toolRequests) && data.toolRequests.length > 0) ||
+        (Number.isInteger(data.chunkCount) && Number.isInteger(data.chunkIndex) && data.chunkIndex < data.chunkCount - 1);
+      if (typeof content !== 'string' || (!content && !continued)) return;
+      const turnId = typeof data.turnId === 'string' ? data.turnId : chat.activeTurnId;
+      if (turnId) chat.activeTurnId = turnId;
       const patchEditorTurn = chat.editorTurn && chat.editorMode === 'patch';
       const savedContent = patchEditorTurn ? 'Perubahan file disiapkan sebagai patch di editor.' : content;
-      chat.messages.push({ role: 'assistant', content: savedContent, at: Date.now() });
+      const message = { role: 'assistant', content: savedContent, at: Date.now() };
+      if (turnId) message.turnId = turnId;
+      if (typeof data.messageId === 'string') message.messageId = data.messageId;
+      chat.messages.push(message);
       chat.messages = chat.messages.slice(-500);
       try { saveStore(); } catch (error) {
         console.error('[copilot] gagal menyimpan riwayat chat', error);
         emit(chat, 'storage_error', { message: 'Respons diterima tetapi riwayat gagal disimpan.' });
       }
-      emit(chat, 'assistant_final', { content: savedContent });
+      emit(chat, 'assistant_final', { content: savedContent, continued, turnId, messageId: data.messageId });
       if (patchEditorTurn) emit(chat, 'editor_patch_final', { content });
     });
     session.on('tool.execution_start', event => {
       const data = event.data || {};
+      if (typeof data.turnId === 'string') chat.activeTurnId = data.turnId;
+      if (data.toolCallId) {
+        toolCalls.set(data.toolCallId, data.toolName || 'tool');
+      }
       emit(chat, 'tool_start', {
         id: data.toolCallId || crypto.randomBytes(6).toString('hex'),
         name: data.toolName || 'tool',
@@ -407,8 +422,11 @@ function createCopilotApi(app, { wrap, HttpError, guard, scope, block, validName
     });
     session.on('tool.execution_complete', event => {
       const data = event.data || {};
+      const name = toolCalls.get(data.toolCallId);
+      if (data.toolCallId) toolCalls.delete(data.toolCallId);
       emit(chat, 'tool_complete', {
         id: data.toolCallId,
+        name,
         success: !!data.success,
         error: data.error ? String(data.error).slice(0, 1000) : ''
       });
@@ -432,6 +450,7 @@ function createCopilotApi(app, { wrap, HttpError, guard, scope, block, validName
       chat.editorTurn = false;
       chat.editorMode = null;
       chat.liveAssistant = '';
+      chat.activeTurnId = null;
       chat.updatedAt = Date.now();
       try { saveStore(); } catch (error) {
         console.error('[copilot] gagal menyimpan status chat', error);
@@ -445,6 +464,7 @@ function createCopilotApi(app, { wrap, HttpError, guard, scope, block, validName
       chat.editorTurn = false;
       chat.editorMode = null;
       chat.liveAssistant = '';
+      chat.activeTurnId = null;
       chat.updatedAt = Date.now();
       emit(chat, 'error', { message: String(data.message || 'Copilot mengalami error').slice(0, 1000) });
       try { saveStore(); } catch (error) {

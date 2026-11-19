@@ -104,6 +104,7 @@ function registerCopilotChatRoutes(app, deps) {
     chat.updatedAt = Date.now();
     chat.running = true;
     chat.liveAssistant = '';
+    chat.activeTurnId = crypto.randomBytes(16).toString('hex');
     try { saveStore(); }
     catch (error) {
       chat.messages.pop();
@@ -111,6 +112,7 @@ function registerCopilotChatRoutes(app, deps) {
       chat.updatedAt = previousUpdatedAt;
       chat.running = false;
       chat.liveAssistant = '';
+      chat.activeTurnId = null;
       throw error;
     }
     emit(chat, 'turn_start', {});
@@ -118,6 +120,8 @@ function registerCopilotChatRoutes(app, deps) {
       await session.send({ prompt: message });
     } catch (error) {
       chat.running = false;
+      chat.liveAssistant = '';
+      chat.activeTurnId = null;
       emit(chat, 'error', { message: error.message || 'gagal mengirim pesan ke Copilot' });
       emit(chat, 'turn_end', {});
       saveStore();

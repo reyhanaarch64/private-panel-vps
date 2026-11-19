@@ -26,8 +26,8 @@ function setView(view) {
 
 const CP = {
   chats: [], active: LS.get('vpsacc_copilot_active', null), after: 0, replayUntil: 0, pollTimer: null, polling: false, loaded: false,
-  assistantNode: null, assistantText: '', activities: new Map(), workDrawer: null, workList: null, commandStates: new Map(),
-  mcpApprovals: new Map(), busy: false, authenticated: false,
+  assistantNode: null, assistantText: '', assistantSegment: null, activities: new Map(), workDrawer: null, workList: null, commandStates: new Map(),
+  mcpApprovals: new Map(), assistantMessageIds: new Set(), visualizations: new Set(), busy: false, authenticated: false,
   settings: null,
   loginJobId: null, loginAfter: 0, loginOutput: '', loginPollTimer: null, loginPolling: false, loginStarting: false
 };
@@ -89,15 +89,172 @@ function enhanceCopilotCodeBlocks(body) {
   });
 }
 function renderCopilotMarkdown(body, text) {
+  body.replaceChildren();
   try {
     if (window.marked && typeof window.marked.parse === 'function' && window.DOMPurify) {
       const html = window.marked.parse(text, { gfm: true });
       body.innerHTML = window.DOMPurify.sanitize(html, { USE_PROFILES: { html: true } });
       enhanceCopilotCodeBlocks(body);
+    } else {
+      body.textContent = text || '';
+    }
+  } catch (e) {
+    body.textContent = text || '';
+  }
+}
+function appendCopilotMarkdown(body, text) {
+  if (!text) return;
+  const segment = h('div', 'copilot-markdown-segment');
+  renderCopilotMarkdown(segment, text);
+  body.append(segment);
+}
+const copilotVisualizationIcons = new Set([
+  'analytics', 'bolt', 'check_circle', 'cloud', 'database', 'developer_board', 'dns', 'error',
+  'info', 'language', 'lightbulb', 'memory', 'monitoring', 'network_check', 'query_stats',
+  'router', 'schedule', 'security', 'settings', 'shield', 'signal_cellular_alt', 'speed',
+  'storage', 'task_alt', 'terminal', 'visibility', 'warning'
+]);
+function copilotVisualizationNode(spec, id) {
+  const card = h('section', 'copilot-visualization');
+  if (id) card.dataset.visualizationId = id;
+  const heading = h('div', 'copilot-visualization-heading');
+  if (!spec || typeof spec.title !== 'string' || !Array.isArray(spec.elements) || spec.elements.length > 24) {
+    card.append(h('div', 'copilot-visualization-pending', 'Visualisasi tidak dapat ditampilkan.'));
+    return card;
+  }
+  if (typeof spec.icon === 'string' && copilotVisualizationIcons.has(spec.icon)) {
+    heading.append(ic(spec.icon));
+  }
+  heading.append(h('strong', null, spec.title));
+  card.append(heading);
+  if (spec.description) card.append(h('p', 'copilot-visualization-description', spec.description));
+  const content = h('div', 'copilot-visualization-content');
+  let metricGrid = null;
+  const tone = value => ['neutral', 'success', 'warning', 'danger', 'accent'].includes(value) ? value : 'accent';
+  const icon = (parent, name) => {
+    if (typeof name === 'string' && copilotVisualizationIcons.has(name)) parent.append(ic(name));
+  };
+  (spec.elements || []).forEach(element => {
+    if (!element || typeof element !== 'object') return;
+    if (element.type === 'metric') {
+      if (!metricGrid) {
+        metricGrid = h('div', 'copilot-visualization-metrics');
+        content.append(metricGrid);
+      }
+      const metric = h('div', 'copilot-visualization-metric tone-' + tone(element.tone));
+      if (typeof element.id === 'string') metric.dataset.vizKey = element.id;
+      metric.dataset.unit = element.unit || '';
+      const label = h('div', 'copilot-visualization-metric-label');
+      icon(label, element.icon);
+      label.append(h('span', null, element.label || ''));
+      metric.append(label);
+      const value = h('strong', 'copilot-visualization-metric-value', String(element.value ?? ''));
+      value.append(document.createTextNode(element.unit || ''));
+      metric.append(value);
+      metricGrid.append(metric);
       return;
     }
-  } catch (e) {}
-  body.textContent = text || '';
+    metricGrid = null;
+    if (element.type === 'heading') {
+      content.append(h('h4', 'copilot-visualization-section', element.text || ''));
+    } else if (element.type === 'text') {
+      content.append(h('p', 'copilot-visualization-text', element.text || ''));
+    } else if (element.type === 'icon') {
+      const item = h('div', 'copilot-visualization-icon');
+      icon(item, element.icon);
+      if (element.text) item.append(h('span', null, element.text));
+      content.append(item);
+    } else if (element.type === 'divider') {
+      content.append(h('div', 'copilot-visualization-divider'));
+    } else if (element.type === 'progress') {
+      const row = h('div', 'copilot-visualization-progress');
+      if (typeof element.id === 'string') row.dataset.vizKey = element.id;
+      row.dataset.max = String(element.max ?? 100);
+      row.dataset.unit = element.unit || '';
+      const label = h('div', 'copilot-visualization-row');
+      label.append(h('span', null, element.label || ''));
+      const valueLabel = h('span', 'copilot-visualization-progress-value',
+        String(element.value ?? 0) + (element.unit || '') + ' / ' + String(element.max ?? 100) + (element.unit || ''));
+      label.append(valueLabel);
+      const track = h('div', 'copilot-visualization-track');
+      const fill = h('div', 'copilot-visualization-fill tone-' + tone(element.tone));
+      const max = Number(element.max) > 0 ? Number(element.max) : 100;
+      fill.style.width = Math.max(0, Math.min(100, Number(element.value) / max * 100)) + '%';
+      track.append(fill);
+      row.append(label, track);
+      content.append(row);
+    } else if (element.type === 'status') {
+      const row = h('div', 'copilot-visualization-status');
+      const label = h('span', 'copilot-visualization-status-label');
+      icon(label, element.icon);
+      label.append(h('span', null, element.label || ''));
+      row.append(label, h('span', 'copilot-visualization-badge tone-' + tone(element.tone), element.value || ''));
+      content.append(row);
+    } else if (element.type === 'chart' && Array.isArray(element.labels) && Array.isArray(element.values)) {
+      const chart = h('div', 'copilot-visualization-chart');
+      chart.append(h('h4', 'copilot-visualization-section', element.title || 'Grafik'));
+      const max = Math.max(1, ...element.values.map(value => Number(value) || 0));
+      element.labels.slice(0, 12).forEach((labelText, index) => {
+        const row = h('div', 'copilot-visualization-chart-row');
+        const details = h('div', 'copilot-visualization-row');
+        details.append(h('span', null, String(labelText)), h('span', null, String(element.values[index] ?? '')));
+        const track = h('div', 'copilot-visualization-track');
+        const fill = h('div', 'copilot-visualization-fill tone-' + tone(element.tone));
+        fill.style.width = Math.max(0, Math.min(100, Number(element.values[index]) / max * 100)) + '%';
+        track.append(fill);
+        row.append(details, track);
+        chart.append(row);
+      });
+      content.append(chart);
+    } else if (element.type === 'range') {
+      const control = h('label', 'copilot-visualization-range');
+      const row = h('span', 'copilot-visualization-row');
+      row.append(h('span', null, element.label || ''));
+      const output = h('output', null, String(element.value ?? 0) + (element.unit || ''));
+      row.append(output);
+      const input = h('input', 'copilot-visualization-range-input');
+      input.type = 'range';
+      input.min = String(element.min ?? 0);
+      input.max = String(element.max ?? 100);
+      input.step = String(element.step ?? 1);
+      input.value = String(element.value ?? 0);
+      input.setAttribute('aria-label', element.label || 'Kontrol visualisasi');
+      input.addEventListener('input', () => {
+        output.textContent = input.value + (element.unit || '');
+        if (!element.target) return;
+        const target = [...card.querySelectorAll('[data-viz-key]')]
+          .find(item => item.dataset.vizKey === element.target);
+        if (!target) return;
+        if (target.classList.contains('copilot-visualization-metric')) {
+          const value = $('.copilot-visualization-metric-value', target);
+          if (value) value.textContent = input.value + (target.dataset.unit || '');
+        } else if (target.classList.contains('copilot-visualization-progress')) {
+          const value = $('.copilot-visualization-progress-value', target);
+          const fill = $('.copilot-visualization-fill', target);
+          const max = Number(target.dataset.max);
+          if (value) value.textContent = input.value + (target.dataset.unit || '') + ' / ' + max + (target.dataset.unit || '');
+          if (fill && max > 0) fill.style.width = Math.max(0, Math.min(100, Number(input.value) / max * 100)) + '%';
+        }
+      });
+      control.append(row, input);
+      content.append(control);
+    }
+  });
+  card.append(content);
+  return card;
+}
+function ensureCopilotAssistantSegment() {
+  if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
+  if (CP.assistantNode.classList.contains('copilot-typing')) {
+    CP.assistantNode.classList.remove('copilot-typing');
+    CP.assistantNode.replaceChildren();
+  }
+  if (!CP.assistantSegment) {
+    CP.assistantSegment = h('div', 'copilot-markdown-segment');
+    CP.assistantNode.append(CP.assistantSegment);
+    CP.assistantText = '';
+  }
+  return CP.assistantSegment;
 }
 function copilotMessage(role, text) {
   const row = h('div', 'copilot-message ' + role);
@@ -121,12 +278,14 @@ function copilotTyping() {
   body.append(dots);
   CP.assistantNode = body;
   CP.assistantText = '';
+  CP.assistantSegment = null;
 }
 function clearCopilotTyping() {
   if (!CP.assistantNode || !CP.assistantNode.classList.contains('copilot-typing')) return;
   CP.assistantNode.closest('.copilot-message')?.remove();
   CP.assistantNode = null;
   CP.assistantText = '';
+  CP.assistantSegment = null;
 }
 function copilotActivity(id, label) {
   let node = id && CP.activities.get(id);
@@ -237,6 +396,10 @@ function renderCopilotHistory(chat) {
   CP.commandStates.clear();
   CP.assistantNode = null;
   CP.assistantText = '';
+  CP.assistantSegment = null;
+  CP.assistantMessageIds.clear();
+  CP.visualizations.clear();
+  const assistantTurns = new Map();
   const history = [
     ...(chat.messages || []).map(message => ({ kind: 'message', at: message.at || 0, message })),
     ...(chat.activities || []).map(activity => ({ kind: 'activity', at: activity.startedAt || activity.endedAt || 0, activity }))
@@ -247,9 +410,21 @@ function renderCopilotHistory(chat) {
         CP.workDrawer = null;
         CP.workList = null;
         CP.commandStates.clear();
+        assistantTurns.clear();
       }
-      copilotMessage(item.message.role, item.message.content);
+      if (item.message.role === 'assistant' && item.message.turnId) {
+        if (item.message.messageId) CP.assistantMessageIds.add(item.message.messageId);
+        let body = assistantTurns.get(item.message.turnId);
+        if (!body) {
+          body = copilotMessage('assistant', '');
+          assistantTurns.set(item.message.turnId, body);
+        }
+        appendCopilotMarkdown(body, item.message.content || '');
+      } else {
+        copilotMessage(item.message.role, item.message.content);
+      }
       if (item.message.role === 'assistant') {
+        if (item.message.messageId) CP.assistantMessageIds.add(item.message.messageId);
         CP.workDrawer = null;
         CP.workList = null;
         CP.commandStates.clear();
@@ -257,7 +432,15 @@ function renderCopilotHistory(chat) {
       return;
     }
     const a = item.activity;
-    if (a.kind === 'command') {
+    if (a.kind === 'visualization') {
+      if (a.id) CP.visualizations.add(a.id);
+      let body = a.turnId && assistantTurns.get(a.turnId);
+      if (!body) {
+        body = copilotMessage('assistant', '');
+        if (a.turnId) assistantTurns.set(a.turnId, body);
+      }
+      body.append(copilotVisualizationNode(a.spec, a.id));
+    } else if (a.kind === 'command') {
       const label = a.running ? 'Berjalan' : (a.error ? 'Gagal' : (a.signal ? 'Dihentikan' : (a.code === 0 ? 'Selesai' : 'Kode ' + a.code)));
       const node = copilotCommandActivity(a.id, label, a.command, a.cwd);
       if (a.error || (a.code != null && a.code !== 0)) node.classList.add('failed');
@@ -536,22 +719,49 @@ function handleCopilotEvent(event) {
     CP.workDrawer = null;
     CP.workList = null;
     CP.commandStates.clear();
+    CP.assistantText = '';
+    CP.assistantSegment = null;
     copilotTyping();
   } else if (event.type === 'assistant_delta') {
+    if (data.messageId && CP.assistantMessageIds.has(data.messageId)) return;
     if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
-    CP.assistantNode.classList.remove('copilot-typing');
+    const segment = ensureCopilotAssistantSegment();
     CP.assistantText += data.text || '';
-    renderCopilotMarkdown(CP.assistantNode, CP.assistantText);
+    renderCopilotMarkdown(segment, CP.assistantText);
     copilotScroll();
   } else if (event.type === 'assistant_final') {
+    if (data.messageId && CP.assistantMessageIds.has(data.messageId)) return;
     if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
-    CP.assistantNode.classList.remove('copilot-typing');
-    CP.assistantText = data.content || CP.assistantText;
-    renderCopilotMarkdown(CP.assistantNode, CP.assistantText);
-    CP.assistantNode = null;
+    if (typeof data.content === 'string' && data.content) {
+      const segment = ensureCopilotAssistantSegment();
+      CP.assistantText = data.content;
+      renderCopilotMarkdown(segment, CP.assistantText);
+    }
+    if (data.continued) {
+      CP.assistantText = '';
+      CP.assistantSegment = null;
+    } else {
+      CP.assistantNode = null;
+      CP.assistantSegment = null;
+      CP.assistantText = '';
+    }
+    if (data.messageId) CP.assistantMessageIds.add(data.messageId);
+  } else if (event.type === 'visualization') {
+    if (data.id && CP.visualizations.has(data.id)) return;
+    if (data.id) CP.visualizations.add(data.id);
+    if (!CP.assistantNode) CP.assistantNode = copilotMessage('assistant', '');
+    if (CP.assistantNode.classList.contains('copilot-typing')) {
+      CP.assistantNode.classList.remove('copilot-typing');
+      CP.assistantNode.replaceChildren();
+    }
+    CP.assistantNode.append(copilotVisualizationNode(data.spec, data.id));
+    CP.assistantSegment = null;
     CP.assistantText = '';
+    copilotScroll();
   } else if (event.type === 'tool_start') {
-    if (data.name === 'run_command' || data.name === 'run_safe_command') {
+    if (data.name === 'render_visualization') {
+      return;
+    } else if (data.name === 'run_command' || data.name === 'run_safe_command') {
       const args = data.args || {};
       copilotCommandActivity(data.id, 'Menyiapkan command', args.command || args.action || data.name, args.cwd);
     } else {
@@ -559,6 +769,7 @@ function handleCopilotEvent(event) {
       copilotActivityText(node).textContent = JSON.stringify(data.args || {}, null, 2);
     }
   } else if (event.type === 'tool_complete') {
+    if (data.name === 'render_visualization') return;
     const node = CP.activities.get(data.id) || copilotActivity(data.id);
     if (node.classList.contains('copilot-command-drawer')) {
       if (!data.success) node.classList.add('failed');
@@ -661,6 +872,7 @@ function handleCopilotEvent(event) {
     clearCopilotTyping();
     CP.assistantNode = null;
     CP.assistantText = '';
+    CP.assistantSegment = null;
   }
 }
 
