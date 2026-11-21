@@ -60,9 +60,6 @@ function registerCopilotAuthRoutes(app, deps) {
   }));
 
   app.post('/api/copilot/login', wrap(async (req, res) => {
-    const copilot = await getClient();
-    const status = await copilot.getAuthStatus();
-    if (status.isAuthenticated) return res.json({ authenticated: true });
     if (!req.body || req.body.allowPlaintext !== true) {
       throw new HttpError(400, 'persetujuan penyimpanan token plaintext diperlukan');
     }
@@ -75,19 +72,29 @@ function registerCopilotAuthRoutes(app, deps) {
     const job = getLoginJob();
     if (!job || job.id !== req.params.id) throw new HttpError(404, 'proses login tidak ditemukan atau sudah diganti');
     const after = Math.max(0, Number.parseInt(req.query.after, 10) || 0);
-    let copilot = await getClient();
-    let status = await copilot.getAuthStatus();
-    if (job.done && !status.isAuthenticated) {
-      copilot = await refreshClientAfterLogin(job);
-      status = await copilot.getAuthStatus();
+    let authenticated = false;
+    let error = job.error;
+    if (job.done && !job.error) {
+      try {
+        let copilot = await getClient();
+        let status = await copilot.getAuthStatus();
+        if (!status.isAuthenticated) {
+          copilot = await refreshClientAfterLogin(job);
+          status = await copilot.getAuthStatus();
+        }
+        authenticated = !!status.isAuthenticated;
+      } catch (statusError) {
+        error = 'login selesai, tapi status autentikasi Copilot gagal diperiksa: ' +
+          (statusError.message || 'error tidak diketahui');
+      }
     }
     res.json({
       output: job.output.slice(after),
       next: job.output.length,
       running: job.running,
       done: job.done,
-      authenticated: !!status.isAuthenticated,
-      error: job.error
+      authenticated,
+      error
     });
   }));
 }
